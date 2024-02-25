@@ -1,6 +1,6 @@
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
-use std::collections::HashMap;
+use std::{collections::HashMap, io::Error};
 
 #[derive(Deserialize)]
 pub struct ShortenRequest {
@@ -26,6 +26,13 @@ impl UrlStore {
         if !self.urls.contains_key(&hash) {
             self.urls.insert(hash.clone(), url.to_owned());
         }
-        format!("localhost:8080/{}", hash)
+        format!("localhost:8080/api/{}", hash)
+    }
+
+    pub fn redirect(&mut self, hash: &str) -> Result<&String, Error> {
+        self.urls.get(hash).ok_or(Error::new(
+            std::io::ErrorKind::NotFound,
+            "short URL not found",
+        ))
     }
 }

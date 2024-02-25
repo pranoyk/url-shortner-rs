@@ -17,11 +17,24 @@ async fn shorten(url: web::Json<urlstore::ShortenRequest>) -> impl Responder {
     HttpResponse::Ok().body(short_url)
 }
 
+#[get("/{short_id}")]
+async fn redirect(path: web::Path<String>) -> impl Responder {
+    let short_id = path.into_inner();
+    match URLSTORE.lock().unwrap().redirect(&short_id) {
+        Ok(url) => HttpResponse::PermanentRedirect()
+            .append_header(("Location", url.clone()))
+            .finish(),
+        Err(e) => HttpResponse::NotFound().body(format!("Error: {}", e)),
+    }
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     HttpServer::new(|| {
         App::new().service(hello).service(
-            web::scope("/api").service(web::resource("/shorten").route(web::post().to(shorten))),
+            web::scope("/api")
+                .service(web::resource("/shorten").route(web::post().to(shorten)))
+                .service(redirect),
         )
     })
     .bind(("127.0.0.1", 8080))?
